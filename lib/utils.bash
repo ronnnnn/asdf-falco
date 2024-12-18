@@ -2,7 +2,6 @@
 
 set -euo pipefail
 
-# TODO: Ensure this is the correct GitHub homepage where releases can be downloaded for falco.
 GH_REPO="https://github.com/ysugimoto/falco"
 TOOL_NAME="falco"
 TOOL_TEST="falco -V"
@@ -31,9 +30,33 @@ list_github_tags() {
 }
 
 list_all_versions() {
-	# TODO: Adapt this. By default we simply list the tag names from GitHub releases.
-	# Change this function if falco has other means of determining installable versions.
 	list_github_tags
+}
+
+extract_os() {
+	local os_name
+	os_name=""
+
+	case "$(uname -s)" in
+	Linux*) os_name="linux" ;;
+	Darwin*) os_name="darwin" ;;
+	*) fail "Unsupported OS: $(uname -s)" ;;
+	esac
+
+	echo "$os_name"
+}
+
+extract_arch() {
+	local arch_name
+	arch_name=""
+
+	case "$(uname -m)" in
+	x86_64) arch_name="amd64" ;;
+	arm64) arch_name="arm64" ;;
+	*) fail "Unsupported architecture: $(uname -m)" ;;
+	esac
+
+	echo "$arch_name"
 }
 
 download_release() {
@@ -41,8 +64,9 @@ download_release() {
 	version="$1"
 	filename="$2"
 
-	# TODO: Adapt the release URL convention for falco
-	url="$GH_REPO/archive/v${version}.tar.gz"
+	os_name=$(extract_os)
+	arch_name=$(extract_arch)
+	url="$GH_REPO/releases/download/v${version}/falco-${os_name}-${arch_name}.tar.gz"
 
 	echo "* Downloading $TOOL_NAME release $version..."
 	curl "${curl_opts[@]}" -o "$filename" -C - "$url" || fail "Could not download $url"
@@ -61,7 +85,6 @@ install_version() {
 		mkdir -p "$install_path"
 		cp -r "$ASDF_DOWNLOAD_PATH"/* "$install_path"
 
-		# TODO: Assert falco executable exists.
 		local tool_cmd
 		tool_cmd="$(echo "$TOOL_TEST" | cut -d' ' -f1)"
 		test -x "$install_path/$tool_cmd" || fail "Expected $install_path/$tool_cmd to be executable."
